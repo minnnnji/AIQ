@@ -8,8 +8,7 @@ urllib3.disable_warnings()
 
 """
 DB명 : Quant
-시가총액 코스피/닥 100위 기업 
-최근 5년간의 차트데이터 
+시가총액 코스피/닥 100위 기업 최근 5년간의 차트데이터 
 종목코드(code), 날짜(date), 시가(open), 고가(high), 저가(low),  종가(close), 전일비(diff), 거래량(volume)
 """
 
@@ -44,9 +43,16 @@ class Chartdata:
             curs.execute(sql)                       #sql문 실행 
             self.conn.commit()                      #DB 최종 저장 
         ###################################
+        
+        self.codes = dict()                         #종목코드를 담을 딕셔너리 생성
 
-        self.codes = dict()                         #종목코드를 담을 딕셔너리 생성 
-        self.update_comp_info()                     #회사정보 업데이트 함수 실행 
+        sql = "SELECT * FROM company_info"                                          #company_info를 선택한다는 sql문 
+        df = pd.read_sql(sql, self.conn)                                            #테이블을 읽어서 df로 변환
+        for idx in range(len(df)):
+           self.codes[df['code'].values[idx]] = df['company'].values[idx]          #종목코드 딕셔너리에 종목코드와 회사 연결해서 저장 
+
+     
+        #self.update_comp_info()                    #회사정보 업데이트 함수 실행 
     
     def __del__(self):                              #소멸자함수
         """소멸자: MariaDB 연결 해제 """
@@ -134,7 +140,7 @@ class Chartdata:
         """네이버에서 주식 시세를 읽어서 데이터프레임으로 반환"""
         try:
             url = f"http://finance.naver.com/item/sise_day.nhn?code={code}"         #네이버 금융 사이트 불러오기 
-            lastpage = 124                                                          #lastpage를 124로 지정 (최대 5년치 일별 시세 데이터 저장)
+            lastpage = 125                                                          #lastpage를 124로 지정 (최대 5년치 일별 시세 데이터 저장)
             
             df = pd.DataFrame()                                                     #새로운 데이터프레임 생성
             pages = min(int(lastpage), pages_to_fetch)                              #lastpage와 pages_to_fetch(함수의 원소) 중 더 작은 값을 pages로 저장     
@@ -151,6 +157,7 @@ class Chartdata:
             df = df.dropna()                                                                                                                  #dropna : 결측값 제거, dropna() : 결측값 있는 전체 행 삭제 
             df[['close','diff','open','high','low','volume']] = df[['close','diff','open','high','low','volume']].astype(int)                 #각 값을 int형으로 변경 (DB에 BIGINT형으로 지정했기 때문에)
             df = df[['date','open','high','low','close','diff','volume']]                                                                     #원하는 순서대로 칼럼 재조합   
+            df = df.iloc[6:-1]
         
         except Exception as e:                                                      #에러 발생 시, 에러 출력 
             print('Exception occured :', str(e))
@@ -177,7 +184,7 @@ class Chartdata:
 
     def execute_daily(self):
         """실행 즉시 및 매일 오후 5시에 daily_price 테이블 업데이트"""
-        self.update_comp_info()                                                     #회사종목 업데이트
+       # self.update_comp_info()                                                     #회사종목 업데이트
 
         try:                                                                        #실행 (예외처리 시, 사용)
             with open('config.json','r') as in_file:                                #config.json 파일을 읽기 모드로 open --> in_file의 이름으로 
@@ -186,7 +193,7 @@ class Chartdata:
 
         except FileNotFoundError:                                                   #예외 발생 시, (파일이 없는 경우)
             with open('config.json','w') as out_file:                               #config.json 파일을 쓰기 모드로 open --> out_file의 이름으로 
-                pages_to_fetch = 124                                                #초기 값을 124로 설정 
+                pages_to_fetch = 125                                                #초기 값을 124로 설정 
                 config = {'pages_to_fetch' : 1}                                     #config의 데이터 1로 설정 (최초 업데이트한 후에는 1장씩 업데이트 하기 위해)
                 json.dump(config, out_file)                                         #config 값을 json파일로 변경하여 out_file에 저장 
 

@@ -1,0 +1,1 @@
+python C:\Kiwoom_Package\DB\Chartdata.py
