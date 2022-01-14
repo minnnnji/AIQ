@@ -36,7 +36,7 @@ class News :
         ############################
         ### 쪽 별로 new url 가져오기 ###
         ############################
-        
+
         # html 속 title
         body = soup.select_one('tbody')
         # title이 들어간 a태그 리스트 추출
@@ -60,15 +60,13 @@ class News :
 
             # 본문 내용 가져오기 
             body = soup.select_one('table.view')
-            contents = body.select('tr > td > div#news_read') 
+            contents = body.select_one('tr > td > div#news_read') 
 
             # 본문 내용에서 text만 뽑아오기 
-            contents_text = []
-            for c in contents:
-                contents_text.append(c.get_text()) 
+            contents_text = contents.get_text()
             
             # 본문 내용 cleaning
-            contents_text_re = re.sub('[-=+,#/\?:^$.@*\"※~&%ㆍ!』\\‘|\(\)\[\]\<\>`\'…》]',' ', contents_text[0])
+            contents_text_re = re.sub('[-=+,#/\?:^$.@*\"※~&%ㆍ!』\\‘|\(\)\[\]\<\>`\'…》]',' ', contents_text)
             contents_text_re = ' '.join(contents_text_re.split())
             
             # 날짜 가져오기
