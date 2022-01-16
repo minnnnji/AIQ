@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup # For BeautifulSoup
 import pandas as pd # For DB
 from selenium import webdriver # For Selenium
 import re # For data cleaning 
-
+import requests
 
 # 접속할 url
 # {'에스디바이오센서': 137310} #'https://finance.naver.com/item/news_news.naver?code={Code_num}'
@@ -78,8 +78,53 @@ class News :
 
         news_crawling.to_csv('news_crawling.csv', index=None, header=True)
 
+    def price_crawling(self, code):
+        self.url = f'https://finance.naver.com/item/sise_day.naver?code={code}&page=1' #url 설정
+        self.driver.get(self.url) # 해당 페이지 loading
+
+        price_crawling = pd.DataFrame()
+        
+        ############################
+        ### 쪽 별로 new url 가져오기 ###
+        ############################
+
+        page_bar = self.driver.find_element_by_class_name('Nnavi')
+        pages = page_bar.find_elements_by_css_selector('a')
+
+        ################### 수정 필요 ######################
+        page_now = '1'
+        for p in pages:
+            page_num = p.text.strip()
+            page_html = self.driver.page_source
+            print(p.text)
+            print(self.driver.current_url)
+            if page_num in ['맨앞', '이전', '맨뒤']:
+                pass
+            elif page_num == '다음':
+                p.send_keys('\n')
+            elif int(page_num) > int(page_now):
+                p.send_keys('\n')
+                page_now = page_num
+            else:
+                print('마지막?')
+        #################################################   
+
+        # 
+        page_html = self.driver.page_source
+
+        # html 속 날짜 + 시세 
+        price_crawling = price_crawling.append(pd.read_html(page_html)[0])
+        # 빈 값 제거 
+        price_crawling.dropna(inplace=True)
+
+
 
 if __name__ == "__main__":
     news = News()
 
-    news.news_content_crawling(137310)
+    # 뉴스 크롤링
+    # news.news_content_crawling(137310)
+    
+    # 삼성전자 005930 
+    # 시세 크롤링 
+    news.price_crawling('137310')
