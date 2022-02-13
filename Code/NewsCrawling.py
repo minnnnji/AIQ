@@ -6,8 +6,9 @@ import pandas as pd  # For DB
 from selenium import webdriver  # For Selenium
 import re  # For data cleaning
 import warnings
-import datetime
-from twitterscraper import query_tweets
+from selenium.webdriver.common.keys import Keys
+import time
+import traceback
 import csv
 
 warnings.filterwarnings('ignore')
@@ -154,6 +155,85 @@ class News:
         price_crawling.dropna(inplace=True)
         price_crawling.to_csv(f'{code}_price.csv', index=None, header=True)
 
+    def setting_date(self, date):
+        pass
+
+    def daily_volume_crawling(self, keyword):
+        # 기본 URL
+        self.url = f'https://www.google.co.kr/search?q={keyword}'
+        
+        date = pd.read_csv('date_2021-2022.csv')
+
+        cnt = 0 
+        for day in date['date']:    
+            self.driver.get(self.url) 
+            self.driver.find_element_by_xpath('//*[@id="hdtb-tls"]').send_keys(Keys.ENTER) # 도구 창 누르기 
+            time.sleep(2)   
+            self.driver.find_element_by_xpath('//*[@id="hdtbMenus"]/span[2]/g-popup/div[1]').send_keys(Keys.ENTER) # 모든 날짜
+            time.sleep(2)  
+            self.driver.find_element_by_xpath('//*[@id="lb"]/div/g-menu/g-menu-item[7]').click() # 지정 날짜 누르기
+
+            # Start date
+            start_date = self.driver.find_element_by_xpath('//*[@id="OouJcb"]')
+            start_date.send_keys(day)
+
+            # End date
+            end_date = self.driver.find_element_by_xpath('//*[@id="rzG2be"]')
+            end_date.send_keys(day)
+
+            # 실행버튼
+            search_btn = self.driver.find_element_by_xpath('//*[@id="T3kYXe"]/g-button')
+            search_btn.send_keys(Keys.ENTER) 
+            time.sleep(2)  
+
+            self.driver.find_element_by_xpath('//*[@id="hdtb-tls"]').send_keys(Keys.ENTER) # 도구 창 눌러서 날짜 끄기 
+            time.sleep(2)  
+
+            # 일별 검색량 crawling
+            try:
+                volume = self.driver.find_element_by_css_selector('#result-stats').text
+                volume = volume[:volume.index('개')]
+                volume = re.sub(r'[^0-9]', '', volume)  
+
+                date['volume'][cnt] = volume
+                print(day, volume)
+                
+            except:
+                traceback.print_exc()
+                date[day, 'volume'] = 0
+
+            
+            cnt += 1
+            self.driver.back()
+
+        date.to_csv(f'volume.csv', index=None, header=True)
+
+
+
+
+if __name__ == "__main__":
+
+    news = News()
+
+    # 뉴스 크롤링
+    # news.news_content_crawling(137310)
+
+    # 삼성전자 005930 
+    # 시세 크롤링 
+    # news.price_crawling('137310')
+
+    # 구글에서 나오는 하루 검색어양 
+    news.daily_volume_crawling('에스디바이오센서')
+    
+
+
+
+
+#############
+# DUMMY CODES
+#############
+
+'''
 
 class twitter:
     # 초기화 함수 
@@ -172,15 +252,4 @@ class twitter:
         result.to_csv(f'{keyword}_tweet.csv', index=None, header=True)
 
 
-if __name__ == "__main__":
-    # news = News()
-    tweets = twitter()
-
-    # # 뉴스 크롤링
-    # news.news_content_crawling(137310)
-
-    # # 삼성전자 005930 
-    # # 시세 크롤링 
-    # news.price_crawling('137310')
-
-    tweets.tweet_crawling('삼성전자')
+'''
